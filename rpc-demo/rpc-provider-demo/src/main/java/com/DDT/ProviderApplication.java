@@ -3,7 +3,7 @@ package com.DDT;
 import com.DDT.impl.HelloRpcImpl;
 
 public class ProviderApplication {
-    public static void main(String[] args){
+    public static void main(String[] args) throws InterruptedException {
         // 服务提供方，需要注册服务，启动服务
         // 1、封装要发布的服务
         ServiceConfig<HelloRpc> service = new ServiceConfig<>();

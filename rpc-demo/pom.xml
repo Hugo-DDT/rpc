@@ -12,7 +12,7 @@
     <artifactId>rpc-demo</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>rpc-client-demo</module>
+        <module>rpc-consumer-demo</module>
         <module>rpc-provider-demo</module>
         <module>rpc-api</module>
     </modules>

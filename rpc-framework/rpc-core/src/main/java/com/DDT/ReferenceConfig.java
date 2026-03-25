@@ -1,7 +1,7 @@
 package com.DDT;
 
 import com.DDT.discovery.Registry;
-import com.DDT.proxy.handler.RpcInvocationHandler;
+import com.DDT.proxy.handler.RpcConsumerInvocationHandler;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ public class ReferenceConfig<T> {
         // 使用动态代理完成一些工作
          ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
          Class[] classes = new Class[]{interfaceRef};
-         InvocationHandler handler = new RpcInvocationHandler(registry, interfaceRef);
+         InvocationHandler handler = new RpcConsumerInvocationHandler(registry, interfaceRef);
 
          // 使用动态代理生成代理对象
          Object helloProxy = Proxy.newProxyInstance(classLoader, classes,handler);

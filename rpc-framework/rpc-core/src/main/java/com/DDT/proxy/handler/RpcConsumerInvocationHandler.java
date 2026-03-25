@@ -7,7 +7,6 @@ import com.DDT.exceptions.NetworkException;
 import com.DDT.NettyBootstrapInitializer;
 import com.DDT.transport.message.RequestPayload;
 import com.DDT.transport.message.RpcRequest;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
@@ -28,13 +27,13 @@ import java.util.concurrent.TimeoutException;
  * 4、得到结果
  */
 @Slf4j
-public class RpcInvocationHandler implements InvocationHandler {
+public class RpcConsumerInvocationHandler implements InvocationHandler {
 
     private Registry registry;
 
     private Class<?> interfaceRef;
 
-    public RpcInvocationHandler(Registry registry, Class<?> interfaceRef) {
+    public RpcConsumerInvocationHandler(Registry registry, Class<?> interfaceRef) {
         this.registry = registry;
         this.interfaceRef = interfaceRef;
     }

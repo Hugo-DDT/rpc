@@ -1,8 +1,8 @@
 package com.DDT.channelhandler;
 
 import com.DDT.channelhandler.hander.MySimpleChannelInboundHandler;
-import com.DDT.channelhandler.hander.RpcMessageEncoder;
-import io.netty.channel.ChannelInboundHandler;
+import com.DDT.channelhandler.hander.RpcRequestEncoder;
+import com.DDT.channelhandler.hander.RpcResponseDecoder;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.logging.LogLevel;
@@ -18,8 +18,10 @@ public class ConsumerChannelInitializer extends ChannelInitializer<SocketChannel
         socketChannel.pipeline()
                 // netty自带日志处理器
                 .addLast(new LoggingHandler(LogLevel.DEBUG))
-                // 消息编码器
-                .addLast(new RpcMessageEncoder())
+                // 出栈消息编码器
+                .addLast(new RpcRequestEncoder())
+                // 入栈消息解码器
+                .addLast(new RpcResponseDecoder())
                 // 业务处理器
                 .addLast(new MySimpleChannelInboundHandler() {
 

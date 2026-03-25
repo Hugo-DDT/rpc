@@ -6,13 +6,11 @@ import com.DDT.transport.message.RpcRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
-import io.netty.handler.codec.MessageToMessageEncoder;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.List;
 
 /**
  * 自定义协议编码器
@@ -44,7 +42,7 @@ import java.util.List;
  */
 
 @Slf4j
-public class RpcMessageEncoder extends MessageToByteEncoder<RpcRequest> {
+public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext, RpcRequest rpcRequest, ByteBuf byteBuf) throws Exception {
         // 4个字节的魔数值

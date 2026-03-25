@@ -2,8 +2,10 @@ package com.DDT.channelhandler.hander;
 
 import com.DDT.RpcBootstrap;
 import com.DDT.ServiceConfig;
+import com.DDT.enumeration.RespCode;
 import com.DDT.transport.message.RequestPayload;
 import com.DDT.transport.message.RpcRequest;
+import com.DDT.transport.message.RpcResponse;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -22,16 +24,19 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<RpcRequest> {
 
         // 2、根据负载内容进行方法调用
         Object object = callTargetMethod(requestPayload);
+        log.info("请求【{}】已经在服务端完成调用", rpcRequest.getRequestId());
 
         // todo 3、封装响应
+        RpcResponse rpcResponse = new RpcResponse();
+        rpcResponse.setBody(object);
+        rpcResponse.setCode(RespCode.SUCCESS.getCode());
+        rpcResponse.setRequestId(rpcResponse.getRequestId());
+        rpcResponse.setCompressType(rpcRequest.getCompressType());
+        rpcResponse.setSerializeType(rpcResponse.getSerializeType());
 
 
         // 4、写出响应
-        if(object != null) {
-            channelHandlerContext.channel().writeAndFlush(
-                    Unpooled.copiedBuffer(object.toString(), Charset.defaultCharset())
-            );
-        }
+        channelHandlerContext.channel().writeAndFlush(rpcResponse);
     }
 
     private Object callTargetMethod(RequestPayload requestPayload) {

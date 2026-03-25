@@ -1,15 +1,11 @@
 package com.DDT;
 
 import com.DDT.channelhandler.hander.MethodCallHandler;
-import com.DDT.channelhandler.hander.RpcMessageDecoder;
+import com.DDT.channelhandler.hander.RpcRequestDecoder;
+import com.DDT.channelhandler.hander.RpcResponseEncoder;
 import com.DDT.discovery.Registry;
 import com.DDT.discovery.RegistryConfig;
-import com.DDT.utils.NetUtils;
-import com.DDT.utils.zookeeper.ZookeeperNode;
-import com.DDT.utils.zookeeper.ZookeeperUtils;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
@@ -17,12 +13,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.CreateMode;
 
 
 import java.net.InetSocketAddress;
-import java.net.InterfaceAddress;
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -148,9 +141,11 @@ public class RpcBootstrap {
                         // 这里我们就可以添加一些handler了，编解码器，业务处理器
                         socketChannel.pipeline()
                                 .addLast(new LoggingHandler(LogLevel.DEBUG))
-                                .addLast(new RpcMessageDecoder())
+                                .addLast(new RpcRequestDecoder())
                                 // 根据请求进行方法调用
                                 .addLast(new MethodCallHandler())
+                                // 
+                                .addLast(new RpcResponseEncoder())
                         ;
                     }
                 });

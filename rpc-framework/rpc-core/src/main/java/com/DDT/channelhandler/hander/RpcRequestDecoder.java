@@ -45,8 +45,8 @@ import java.io.ObjectInputStream;
 
  */
 @Slf4j
-public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
-    public RpcMessageDecoder() {
+public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
+    public RpcRequestDecoder() {
         super(
             // 找到当前报文的总长度，截取报文，截取出来的报文我们可以去进行解析
             // 最大帧的长度，超过这个maxFrameLength值会直接丢弃
@@ -110,6 +110,7 @@ public class RpcMessageDecoder extends LengthFieldBasedFrameDecoder {
         rpcRequest.setRequestType(requestType);
         rpcRequest.setCompressType(compressType);
         rpcRequest.setSerializeType(serializeType);
+        rpcRequest.setRequestId(requestId);
 
         // 心跳请求没有负载，此处可以判断并直接返回
         if( requestType == RequestType.HEART_BEAT.getId()){

@@ -1,7 +1,12 @@
 package com.DDT;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class ServiceConfig<T> {
     private Class<T> interfaceProvider;
+    @Setter
+    @Getter
     private Object ref;
 
     public Class<T> getInterface() {
@@ -12,11 +17,4 @@ public class ServiceConfig<T> {
         this.interfaceProvider = interfaceProvider;
     }
 
-    public Object getRef() {
-        return ref;
-    }
-
-    public void setRef(Object ref) {
-        this.ref = ref;
-    }
 }

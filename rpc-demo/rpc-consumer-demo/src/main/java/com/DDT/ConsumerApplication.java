@@ -18,6 +18,8 @@ public class ConsumerApplication {
         RpcBootstrap.getInstance()
                 .application("first-rpc-consumer")
                 .registry(new com.DDT.discovery.RegistryConfig("zookeeper://127.0.0.1:2181"))
+                .serialize("jdk")
+                .compress("gzip")
                 .reference(reference);
 
         HelloRpc helloRpc = reference.get();

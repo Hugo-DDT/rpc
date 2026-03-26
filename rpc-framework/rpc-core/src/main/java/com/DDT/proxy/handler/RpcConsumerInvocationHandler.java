@@ -1,6 +1,7 @@
 package com.DDT.proxy.handler;
 
 import com.DDT.RpcBootstrap;
+import com.DDT.compress.CompressorFactory;
 import com.DDT.discovery.Registry;
 import com.DDT.enumeration.RequestType;
 import com.DDT.exceptions.NetworkException;
@@ -78,11 +79,11 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .returnType(method.getReturnType())
                 .build();
 
-        // todo 需要对请求id和各种类型做处理
+
         long requestId = RpcBootstrap.ID_GENERATOR.getId();
         RpcRequest rpcRequest = RpcRequest.builder()
                 .requestId(requestId)
-                .compressType((byte) 1)
+                .compressType((CompressorFactory.getCompressor(RpcBootstrap.COMPRESS_TYPE).getCode()))
                 .requestType(RequestType.REQUEST.getId())
                 .serializeType((SerializerFactory.getSerializer(RpcBootstrap.SERIALIZE_TYPE).getCode()))
                 .requestPayload(requestPayload)

@@ -12,6 +12,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -32,10 +33,13 @@ public class RpcBootstrap {
     private ServiceConfig serviceConfig;
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
-    private int port = 8088;
+    public static  int port = 8088;
+    public static String SERIALIZE_TYPE = "jdk";
+    public static String COMPRESS_TYPE = "gzip";
 
 
     // 注册中心
+    @Getter
     private Registry registry;
 
     // 维护已经发布且暴露的服务列表 key-> interface的全限定名  value -> ServiceConfig
@@ -50,7 +54,7 @@ public class RpcBootstrap {
     // 请求id生成器
     public static final IdGenerator ID_GENERATOR = new IdGenerator(1L, 2L);
 
-    public static String SERIALIZE_TYPE = "jdk";
+
 
     private RpcBootstrap() {
         // 构造启动引导程序，时需要做一些什么初始化的事
@@ -176,6 +180,31 @@ public class RpcBootstrap {
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
         reference.setRegistry(registry);
+        return this;
+    }
+
+    /**
+     * 配置序列化的方式
+     * @param serializeType 序列化的方式
+     */
+    public RpcBootstrap serialize(String serializeType) {
+        SERIALIZE_TYPE = serializeType;
+        if(log.isDebugEnabled()){
+            log.debug("我们配置了使用的序列化的方式为【{}】.",serializeType);
+        }
+        return this;
+    }
+
+    /**
+     * 配置压缩方法
+     * @param compressType 压缩方法
+     * @return
+     */
+    public RpcBootstrap compress(String compressType) {
+        COMPRESS_TYPE = compressType;
+        if(log.isDebugEnabled()){
+            log.debug("我们配置了使用的压缩算法为【{}】.",compressType);
+        }
         return this;
     }
 

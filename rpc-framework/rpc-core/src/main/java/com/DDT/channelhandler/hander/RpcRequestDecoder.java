@@ -1,5 +1,7 @@
 package com.DDT.channelhandler.hander;
 
+import com.DDT.compress.Compressor;
+import com.DDT.compress.CompressorFactory;
 import com.DDT.enumeration.RequestType;
 import com.DDT.serialize.Serializer;
 import com.DDT.serialize.SerializerFactory;
@@ -123,10 +125,11 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         byte[] payload = new byte[payloadLength];
         byteBuf.readBytes(payload);
 
-        // 有了字节数组之后就可以解压缩，反序列化
-        // todo 解压缩
+        // 1、解压缩
+        Compressor compressor = CompressorFactory.getCompressor(compressType).getCompressor();
+        payload = compressor.decompress(payload);
 
-        // 获取序列化器进行反序列化
+        // 2、反序列化
         Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
         RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
         rpcRequest.setRequestPayload(requestPayload);

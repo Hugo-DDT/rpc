@@ -1,5 +1,7 @@
 package com.DDT.channelhandler.hander;
 
+import com.DDT.compress.Compressor;
+import com.DDT.compress.CompressorFactory;
 import com.DDT.serialize.Serializer;
 import com.DDT.serialize.SerializerFactory;
 import com.DDT.serialize.SerializerWrapper;
@@ -65,9 +67,13 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
 
 
         // 写入请求体（requestPayload）
-        // 获取序列化器进行序列化
+        // 1、根据配置的序列化方式进行序列化
         Serializer serializer = SerializerFactory.getSerializer(rpcRequest.getSerializeType()).getSerializer();
         byte[] body = serializer.serialize(rpcRequest.getRequestPayload());
+
+        // 2、根据配置的压缩方式进行压缩
+        Compressor compressor = CompressorFactory.getCompressor(rpcRequest.getCompressType()).getCompressor();
+        body = compressor.compress(body);
 
         byteBuf.writeBytes(body);
 

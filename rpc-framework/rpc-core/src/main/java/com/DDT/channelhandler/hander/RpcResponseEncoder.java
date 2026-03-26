@@ -1,5 +1,7 @@
 package com.DDT.channelhandler.hander;
 
+import com.DDT.compress.Compressor;
+import com.DDT.compress.CompressorFactory;
 import com.DDT.serialize.Serializer;
 import com.DDT.serialize.SerializerFactory;
 import com.DDT.transport.message.MessageFormatConstant;
@@ -68,7 +70,11 @@ public class RpcResponseEncoder extends MessageToByteEncoder<RpcResponse> {
         byte[] body = serializer.serialize(rpcResponse.getBody());
 
 
-        // todo 压缩
+        // 压缩
+        Compressor compressor = CompressorFactory.getCompressor(
+                rpcResponse.getCompressType()
+        ).getCompressor();
+        body = compressor.compress(body);
 
         if(body != null){
             byteBuf.writeBytes(body);

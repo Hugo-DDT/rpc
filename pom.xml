@@ -23,7 +23,8 @@
         <zookeeper.version>3.8.6</zookeeper.version>
         <common-lang.version>3.12.0</common-lang.version>
         <logback.version>1.4.8</logback.version>
-        <fastjson2.version>2.0.34</fastjson2.version>
+        <fastjson2.version>2.0.26</fastjson2.version>
+        <hession.version>4.0.66</hession.version>
         <lombok.version>1.18.38</lombok.version>
     </properties>
 
@@ -63,6 +64,12 @@
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-core</artifactId>
                 <version>${logback.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.caucho</groupId>
+                <artifactId>hessian</artifactId>
+                <version>${hession.version}</version>
             </dependency>
 
             <dependency>

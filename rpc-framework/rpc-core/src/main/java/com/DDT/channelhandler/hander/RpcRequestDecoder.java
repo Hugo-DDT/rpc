@@ -1,6 +1,8 @@
 package com.DDT.channelhandler.hander;
 
 import com.DDT.enumeration.RequestType;
+import com.DDT.serialize.Serializer;
+import com.DDT.serialize.SerializerFactory;
 import com.DDT.transport.message.MessageFormatConstant;
 import com.DDT.transport.message.RequestPayload;
 import com.DDT.transport.message.RpcRequest;
@@ -124,15 +126,12 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         // 有了字节数组之后就可以解压缩，反序列化
         // todo 解压缩
 
-        // todo 反序列化
-        try (ByteArrayInputStream bis = new ByteArrayInputStream(payload);
-             ObjectInputStream ois = new ObjectInputStream(bis)
-        ) {
-            RequestPayload requestPayload = (RequestPayload) ois.readObject();
-            rpcRequest.setRequestPayload(requestPayload);
-        } catch (IOException | ClassNotFoundException e){
-            log.error("请求【{}】反序列化时发生了异常",requestId,e);
-        }
+        // 获取序列化器进行反序列化
+        Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
+        RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
+        rpcRequest.setRequestPayload(requestPayload);
+
+        log.info("请求【{}】已经被解码完成", rpcRequest.getRequestId());
 
         return rpcRequest;
     }

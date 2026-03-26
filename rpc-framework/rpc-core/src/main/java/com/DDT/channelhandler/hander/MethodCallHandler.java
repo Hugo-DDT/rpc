@@ -30,9 +30,9 @@ public class MethodCallHandler extends SimpleChannelInboundHandler<RpcRequest> {
         RpcResponse rpcResponse = new RpcResponse();
         rpcResponse.setBody(object);
         rpcResponse.setCode(RespCode.SUCCESS.getCode());
-        rpcResponse.setRequestId(rpcResponse.getRequestId());
+        rpcResponse.setRequestId(rpcRequest.getRequestId());
         rpcResponse.setCompressType(rpcRequest.getCompressType());
-        rpcResponse.setSerializeType(rpcResponse.getSerializeType());
+        rpcResponse.setSerializeType(rpcRequest.getSerializeType());
 
 
         // 4、写出响应

@@ -22,8 +22,12 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<R
         // 服务提供方，给与的结果
         Object result = rpcResponse.getBody();
         // 从全局的挂起的请求中寻找与之匹配的待处理的 cf
-        CompletableFuture<Object> completableFuture = RpcBootstrap.PENDING_REQUEST.get(1L);
-        completableFuture.complete(result);
+        CompletableFuture<Object> completableFuture = RpcBootstrap.PENDING_REQUEST.remove(rpcResponse.getRequestId());
+        if (completableFuture != null) {
+            completableFuture.complete(result);
+        } else {
+            log.warn("未找到请求【{}】对应的挂起任务，响应体：{}", rpcResponse.getRequestId(), result);
+        }
 
         log.info("消费者接收到服务提供方的结果：{}",result);
     }

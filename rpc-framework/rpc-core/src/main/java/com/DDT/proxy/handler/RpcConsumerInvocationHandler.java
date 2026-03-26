@@ -5,11 +5,13 @@ import com.DDT.discovery.Registry;
 import com.DDT.enumeration.RequestType;
 import com.DDT.exceptions.NetworkException;
 import com.DDT.NettyBootstrapInitializer;
+import com.DDT.serialize.SerializerFactory;
 import com.DDT.transport.message.RequestPayload;
 import com.DDT.transport.message.RpcRequest;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.zookeeper.server.Request;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -77,11 +79,12 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .build();
 
         // todo 需要对请求id和各种类型做处理
-        RpcRequest yrpcRequest = RpcRequest.builder()
-                .requestId(1L)
+        long requestId = RpcBootstrap.ID_GENERATOR.getId();
+        RpcRequest rpcRequest = RpcRequest.builder()
+                .requestId(requestId)
                 .compressType((byte) 1)
                 .requestType(RequestType.REQUEST.getId())
-                .serializeType((byte) 1)
+                .serializeType((SerializerFactory.getSerializer(RpcBootstrap.SERIALIZE_TYPE).getCode()))
                 .requestPayload(requestPayload)
                 .build();
         /*
@@ -102,11 +105,11 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
          */
         // 4、写出报文
         CompletableFuture<Object> completableFuture = new CompletableFuture<>();
-        RpcBootstrap.PENDING_REQUEST.put(1L, completableFuture);
+        RpcBootstrap.PENDING_REQUEST.put(requestId, completableFuture);
 
         // 这里这几 writeAndFlush 写出一个请求，这个请求的实例就会进入pipeline执行出站的一系列操作
-        // 我们可以想象得到，第一个出站程序一定是将 yrpcRequest --> 二进制的报文
-        channel.writeAndFlush(yrpcRequest).addListener((ChannelFutureListener) promise -> {
+        // 我们可以想象得到，第一个出站程序一定是将 rpcRequest --> 二进制的报文
+        channel.writeAndFlush(rpcRequest).addListener((ChannelFutureListener) promise -> {
             // 当前的promise将来返回的结果是什么，writeAndFlush的返回结果
             // 一旦数据被写出去，这个promise也就结束了
             // 但是我们想要的是什么？  服务端给我们的返回值，所以这里处理completableFuture是有问题的

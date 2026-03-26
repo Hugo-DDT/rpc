@@ -1,5 +1,8 @@
 package com.DDT.channelhandler.hander;
 
+import com.DDT.serialize.Serializer;
+import com.DDT.serialize.SerializerFactory;
+import com.DDT.serialize.SerializerWrapper;
 import com.DDT.transport.message.MessageFormatConstant;
 import com.DDT.transport.message.RequestPayload;
 import com.DDT.transport.message.RpcRequest;
@@ -62,7 +65,10 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
 
 
         // 写入请求体（requestPayload）
-        byte[] body = getBodyBytes(rpcRequest.getRequestPayload());
+        // 获取序列化器进行序列化
+        Serializer serializer = SerializerFactory.getSerializer(rpcRequest.getSerializeType()).getSerializer();
+        byte[] body = serializer.serialize(rpcRequest.getRequestPayload());
+
         byteBuf.writeBytes(body);
 
         // 重新处理报文的总长度
@@ -79,26 +85,4 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
 
     }
 
-    private byte[] getBodyBytes(RequestPayload requestPayload) {
-        // 针对不同的消息类型需要做不同的处理，心跳的请求，没有payload
-
-        if(requestPayload == null){
-            return null;
-        }
-
-        // 希望可以通过一些设计模式，面向对象的编程，让我们可以配置修改序列化和压缩的方式
-        // 对象怎么变成一个字节数据  序列化  压缩
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream outputStream = new ObjectOutputStream(baos);
-            outputStream.writeObject(requestPayload);
-
-            // 压缩
-
-            return baos.toByteArray();
-        } catch (IOException e) {
-            log.error("序列化时出现异常");
-            throw new RuntimeException(e);
-        }
-    }
 }

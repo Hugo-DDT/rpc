@@ -34,6 +34,7 @@ public class RpcBootstrap {
     private ProtocolConfig protocolConfig;
     private int port = 8088;
 
+
     // 注册中心
     private Registry registry;
 
@@ -45,6 +46,11 @@ public class RpcBootstrap {
 
     // 定义全局的对外挂起的 completableFuture
     public final static Map<Long, CompletableFuture<Object>> PENDING_REQUEST = new ConcurrentHashMap<>(128);
+
+    // 请求id生成器
+    public static final IdGenerator ID_GENERATOR = new IdGenerator(1L, 2L);
+
+    public static String SERIALIZE_TYPE = "jdk";
 
     private RpcBootstrap() {
         // 构造启动引导程序，时需要做一些什么初始化的事

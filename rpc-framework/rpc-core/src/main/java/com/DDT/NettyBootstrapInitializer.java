@@ -16,7 +16,7 @@ import java.nio.charset.Charset;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 提供bootstrap单例
+ * NettyBootstrapInitializer是一个工具类，负责初始化Netty的Bootstrap对象，并提供一个静态方法来获取这个对象。它在应用程序启动时被调用，确保Bootstrap对象被正确配置和初始化。
  */
 public class NettyBootstrapInitializer {
     @Getter

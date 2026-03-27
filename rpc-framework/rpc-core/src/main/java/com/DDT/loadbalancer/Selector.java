@@ -11,8 +11,4 @@ public interface Selector {
      * @return 具体的服务节点
      */
     InetSocketAddress getNext();
-
-
-    // todo 服务动态上线需要进行reBalance
-    void reBalance();
 }

@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.Random;
 
 /**
  * * 自定义协议解码器
@@ -67,6 +68,9 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
 
     @Override
     protected Object decode(ChannelHandlerContext ctx, ByteBuf in) throws Exception {
+
+//        Thread.sleep(new Random().nextInt(50));
+
         Object decode = super.decode(ctx, in);
         if(decode instanceof ByteBuf byteBuf){
             return decodeFrame(byteBuf);
@@ -109,12 +113,15 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         // 8、请求id
         long requestId = byteBuf.readLong();
 
+        long timeStamp = byteBuf.readLong();
+
         // 我们需要封装
         RpcRequest rpcRequest = new RpcRequest();
         rpcRequest.setRequestType(requestType);
         rpcRequest.setCompressType(compressType);
         rpcRequest.setSerializeType(serializeType);
         rpcRequest.setRequestId(requestId);
+        rpcRequest.setTimeStamp(timeStamp);
 
         // 心跳请求没有负载，此处可以判断并直接返回
         if( requestType == RequestType.HEART_BEAT.getId()){
@@ -122,17 +129,24 @@ public class RpcRequestDecoder extends LengthFieldBasedFrameDecoder {
         }
 
         int payloadLength = fullLength - headLength;
+        if (payloadLength < 0 || payloadLength > byteBuf.readableBytes()) {
+            throw new RuntimeException("Invalid payload length: " + payloadLength + ", readableBytes: " + byteBuf.readableBytes());
+        }
         byte[] payload = new byte[payloadLength];
         byteBuf.readBytes(payload);
 
-        // 1、解压缩
-        Compressor compressor = CompressorFactory.getCompressor(compressType).getCompressor();
-        payload = compressor.decompress(payload);
 
-        // 2、反序列化
-        Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
-        RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
-        rpcRequest.setRequestPayload(requestPayload);
+        if(payload != null && payload.length != 0) {
+            // 有了字节数组之后就可以解压缩，反序列化
+            // 1、解压缩
+            Compressor compressor = CompressorFactory.getCompressor(compressType).getCompressor();
+            payload = compressor.decompress(payload);
+
+            // 2、反序列化
+            Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
+            RequestPayload requestPayload = serializer.deserialize(payload, RequestPayload.class);
+            rpcRequest.setRequestPayload(requestPayload);
+        }
 
         log.info("请求【{}】已经被解码完成", rpcRequest.getRequestId());
 

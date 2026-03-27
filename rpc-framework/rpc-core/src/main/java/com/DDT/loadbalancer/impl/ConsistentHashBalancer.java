@@ -126,10 +126,6 @@ public class ConsistentHashBalancer extends AbstractLoadBalancer {
         }
 
 
-        @Override
-        public void reBalance() {
-
-        }
 
         private String toBinary(int i){
             String s = Integer.toBinaryString(i);

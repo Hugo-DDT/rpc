@@ -21,6 +21,9 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<R
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, RpcResponse rpcResponse) throws Exception {
         // 服务提供方，给与的结果
         Object result = rpcResponse.getBody();
+        // todo 需要针对code做处理
+        result = result == null ? new Object() : result;
+
         // 从全局的挂起的请求中寻找与之匹配的待处理的 cf
         CompletableFuture<Object> completableFuture = RpcBootstrap.PENDING_REQUEST.remove(rpcResponse.getRequestId());
         if (completableFuture != null) {

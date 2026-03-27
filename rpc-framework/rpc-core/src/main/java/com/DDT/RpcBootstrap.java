@@ -3,10 +3,12 @@ package com.DDT;
 import com.DDT.channelhandler.hander.MethodCallHandler;
 import com.DDT.channelhandler.hander.RpcRequestDecoder;
 import com.DDT.channelhandler.hander.RpcResponseEncoder;
+import com.DDT.core.HeartbeatDetector;
 import com.DDT.discovery.Registry;
 import com.DDT.discovery.RegistryConfig;
 import com.DDT.loadbalancer.LoadBalancer;
 import com.DDT.loadbalancer.impl.ConsistentHashBalancer;
+import com.DDT.loadbalancer.impl.MinimumResponseTimeLoadBalancer;
 import com.DDT.loadbalancer.impl.RoundRobinLoadBalancer;
 import com.DDT.transport.message.RpcRequest;
 import io.netty.bootstrap.ServerBootstrap;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -39,7 +42,7 @@ public class RpcBootstrap {
     private ProtocolConfig protocolConfig;
 
 
-    public static final int PORT = 8084;
+    public static final int PORT = 8086;
     public static String SERIALIZE_TYPE = "jdk";
     public static String COMPRESS_TYPE = "gzip";
 
@@ -53,7 +56,7 @@ public class RpcBootstrap {
     // 维护已经发布且暴露的服务列表 key-> interface的全限定名  value -> ServiceConfig
     public static final Map<String,ServiceConfig<?>> SERVERS_LIST = new ConcurrentHashMap<>(16);
 
-    // 连接通道的缓存
+    // 维护已经连接的服务地址和通道的映射关系，key->服务地址  value->netty的channel对象
     public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
 
     // 定义全局的对外挂起的 completableFuture
@@ -61,6 +64,9 @@ public class RpcBootstrap {
 
     // 定义一个线程变量，来存储每一个请求的上下文信息，主要是为了负载均衡算法服务的
     public static final ThreadLocal<RpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
+
+    // 缓存每一个服务通道的心跳响应时间，用来获取最小响应服务
+    public final static TreeMap<Long, Channel> ANSWER_TIME_CHANNEL_CACHE = new TreeMap<>();
 
     // 请求id生成器
     public static final IdGenerator ID_GENERATOR = new IdGenerator(1L, 2L);
@@ -97,7 +103,7 @@ public class RpcBootstrap {
         // 尝试使用 registryConfig 获取一个注册中心，有点工厂设计模式的意思了
         this.registry = registryConfig.getRegistry();
 
-        RpcBootstrap.LOAD_BALANCER = new ConsistentHashBalancer();
+        RpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
         return this;
     }
 
@@ -167,7 +173,7 @@ public class RpcBootstrap {
                                 .addLast(new RpcRequestDecoder())
                                 // 根据请求进行方法调用
                                 .addLast(new MethodCallHandler())
-                                // 
+                                // 将方法调用的结果进行编码，写出到客户端
                                 .addLast(new RpcResponseEncoder())
                         ;
                     }
@@ -188,7 +194,16 @@ public class RpcBootstrap {
     /**
      * ---------------------------服务调用方的相关api---------------------------------
      */
+
+    /**
+     * 配置服务调用方的相关信息，主要是为了生成代理对象时使用
+     * @param reference
+     * @return
+     */
     public RpcBootstrap reference(ReferenceConfig<?> reference) {
+
+        // 开启对这个服务的心跳检测
+        HeartbeatDetector.detectHeartbeat(reference.getInterface().getName());
         // 在这个方法里我们是否可以拿到相关的配置项-注册中心
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心

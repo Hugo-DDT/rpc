@@ -42,9 +42,5 @@ public class RoundRobinLoadBalancer extends AbstractLoadBalancer {
             return address;
         }
 
-        @Override
-        public void reBalance() {
-            // todo 服务动态上线需要进行reBalance
-        }
     }
 }

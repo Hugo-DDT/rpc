@@ -17,6 +17,7 @@ import org.apache.zookeeper.server.Request;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -63,6 +64,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .requestType(RequestType.REQUEST.getId())
                 .serializeType((SerializerFactory.getSerializer(RpcBootstrap.SERIALIZE_TYPE).getCode()))
                 .requestPayload(requestPayload)
+                .timeStamp(new Date().getTime())
                 .build();
 
         RpcBootstrap.REQUEST_THREAD_LOCAL.set(rpcRequest);
@@ -129,7 +131,6 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         });
 
 
-//
         // 如果没有地方处理这个 completableFuture ，这里会阻塞，等待complete方法的执行
         // q: 我们需要在哪里调用complete方法得到结果，很明显 pipeline 中最终的handler的处理结果
         // 5、获得响应结果

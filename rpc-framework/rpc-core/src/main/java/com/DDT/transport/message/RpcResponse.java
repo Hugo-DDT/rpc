@@ -21,6 +21,9 @@ public class RpcResponse {
     private byte compressType;
     private byte serializeType;
 
+    // 请求发送的时间戳
+    private long timeStamp;
+
     // 1 成功，  2 异常
     private byte code;
 

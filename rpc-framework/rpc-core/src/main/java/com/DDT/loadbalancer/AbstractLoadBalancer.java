@@ -13,6 +13,12 @@ public abstract class AbstractLoadBalancer implements LoadBalancer{
     // 服务名和负载均衡选择器的映射做缓存，一个服务对应一个选择器
     private Map<String, Selector> cache = new ConcurrentHashMap<>();
 
+
+    /**
+     * 根据服务名获取一个可用的服务地址
+     * @param serviceName 服务名
+     * @return
+     */
     @Override
     public InetSocketAddress selectServiceAddress(String serviceName) {
         // 从缓存中获取选择器，如果没有则创建一个新的选择器并缓存
@@ -41,4 +47,15 @@ public abstract class AbstractLoadBalancer implements LoadBalancer{
      * @return 负载均衡选择器
      */
     protected abstract Selector getSelector(List<InetSocketAddress> serviceList);
+
+    /**
+     * 重新进行负载均衡
+     * @param serviceName 服务的名称
+     * @param addresses
+     */
+    @Override
+    public synchronized void reLoadBalance(String serviceName,List<InetSocketAddress> addresses) {
+        // 我们可以根据新的服务列表生成新的selector
+        cache.put(serviceName,getSelector(addresses));
+    }
 }

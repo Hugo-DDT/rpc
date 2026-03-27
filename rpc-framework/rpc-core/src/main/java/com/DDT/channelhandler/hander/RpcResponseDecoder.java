@@ -108,12 +108,16 @@ public class RpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         // 8、请求id
         long requestId = byteBuf.readLong();
 
+        // 9、请求时间戳
+        long timeStamp = byteBuf.readLong();
+
         // 我们需要封装
         RpcResponse rpcResponse = new RpcResponse();
         rpcResponse.setCode(responseCode);
         rpcResponse.setCompressType(compressType);
         rpcResponse.setSerializeType(serializeType);
         rpcResponse.setRequestId(requestId);
+        rpcResponse.setTimeStamp(timeStamp);
 
         // todo 心跳请求没有负载，此处可以判断并直接返回
 //        if( requestType == RequestType.HEART_BEAT.getId()){
@@ -124,16 +128,15 @@ public class RpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         byte[] payload = new byte[bodyLength];
         byteBuf.readBytes(payload);
 
-        // 有了字节数组之后就可以解压缩，反序列化
+        if(payload.length > 0) {
+            // 有了字节数组之后就可以解压缩，反序列化
+            // 1、解压缩
+            Compressor compressor = CompressorFactory.getCompressor(compressType).getCompressor();
+            payload = compressor.decompress(payload);
 
-        // 1、解压缩
-        Compressor compressor = CompressorFactory.getCompressor(compressType).getCompressor();
-        payload = compressor.decompress(payload);
-
-
-        // 获取序列化器进行反序列化
-        if (bodyLength > 0) {
-            Serializer serializer = SerializerFactory.getSerializer(serializeType).getSerializer();
+            // 2、反序列化
+            Serializer serializer = SerializerFactory
+                    .getSerializer(rpcResponse.getSerializeType()).getSerializer();
             Object body = serializer.deserialize(payload, Object.class);
             rpcResponse.setBody(body);
         }

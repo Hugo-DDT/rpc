@@ -65,15 +65,21 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
         // 8字节的请求id
         byteBuf.writeLong(rpcRequest.getRequestId());
 
+        byteBuf.writeLong(rpcRequest.getTimeStamp());
+
 
         // 写入请求体（requestPayload）
         // 1、根据配置的序列化方式进行序列化
-        Serializer serializer = SerializerFactory.getSerializer(rpcRequest.getSerializeType()).getSerializer();
-        byte[] body = serializer.serialize(rpcRequest.getRequestPayload());
+        byte[] body = new byte[0];
+        if (rpcRequest.getRequestPayload() != null) {
+            Serializer serializer = SerializerFactory.getSerializer(rpcRequest.getSerializeType()).getSerializer();
+            body = serializer.serialize(rpcRequest.getRequestPayload());
+            // 2、根据配置的压缩方式进行压缩
+            Compressor compressor = CompressorFactory.getCompressor(rpcRequest.getCompressType()).getCompressor();
+            body = compressor.compress(body);
+        }
 
-        // 2、根据配置的压缩方式进行压缩
-        Compressor compressor = CompressorFactory.getCompressor(rpcRequest.getCompressType()).getCompressor();
-        body = compressor.compress(body);
+
 
         byteBuf.writeBytes(body);
 
@@ -88,6 +94,8 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
 
         // 将写指针归位
         byteBuf.writerIndex(writerIndex);
+
+        log.debug("请求【{}】已经完成报文的编码。", rpcRequest.getRequestId());
 
     }
 

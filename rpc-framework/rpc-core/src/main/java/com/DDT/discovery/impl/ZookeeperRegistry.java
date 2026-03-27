@@ -8,6 +8,7 @@ import com.DDT.exceptions.DiscoveryException;
 import com.DDT.utils.NetUtils;
 import com.DDT.utils.zookeeper.ZookeeperNode;
 import com.DDT.utils.zookeeper.ZookeeperUtils;
+import com.DDT.watch.UpAndDownWatcher;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooKeeper;
@@ -71,7 +72,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
     @Override
     public List<InetSocketAddress> lookup(String serviceName) {
         String parentNode = "/" + Constant.BASE_PROVIDERS_PATH +"/"+serviceName;
-        List<String> address = ZookeeperUtils.getChildren(zooKeeper, parentNode, null);
+        List<String> address = ZookeeperUtils.getChildren(zooKeeper, parentNode, new UpAndDownWatcher());
         List<InetSocketAddress> addressList = address.stream().map(s -> {
             String[] split = s.split(":");
             return new InetSocketAddress(split[0], Integer.parseInt(split[1]));

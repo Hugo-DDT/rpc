@@ -16,7 +16,7 @@ public interface Registry {
     /**
      * 发现服务
      * @param serviceName 服务名称
-     * @return
+     * @return 服务列表
      */
-    InetSocketAddress lookup(String serviceName);
+    List<InetSocketAddress> lookup(String serviceName);
 }

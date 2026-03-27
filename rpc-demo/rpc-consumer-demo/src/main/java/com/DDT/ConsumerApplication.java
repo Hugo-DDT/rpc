@@ -24,9 +24,12 @@ public class ConsumerApplication {
 
         HelloRpc helloRpc = reference.get();
         helloRpc.sayHi("你好");
-        log.info("sayHi-->{}", helloRpc.sayHi("你好"));
+        for(int i = 0; i < 10; i++) {
+            new Thread(() -> {
+                log.info("sayHi-->{}", helloRpc.sayHi("你好"));
+            }).start();
+        }
 
     }
-
 
 }

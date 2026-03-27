@@ -43,34 +43,10 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        // 这里就会调用我们自己写的InvocationHandler
-        // 1、连接注册中心
-        // 2、拉取服务列表
-        // 3、选择一个服务并建立连接
-        // 4、发送请求，携带一些信息（接口名，参数列表，方法的名字），获得结果
-        log.info("接口：{}，方法：{}，参数：{}",interfaceRef.getName(),method.getName(),args);
-
-        // 1、发现服务，从注册中心，寻找一个可用的服务
-        // 传入服务的名字,返回ip+端口
-        InetSocketAddress address = registry.lookup(method.getDeclaringClass().getName());
-        log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.", interfaceRef.getName(),address);
-
-        // 使用netty连接服务器，发送 调用的 服务的名字+方法名字+参数列表，得到结果
-        // 定义线程池，EventLoopGroup
-        // q：整个连接过程放在这里行不行，也就意味着每次调用都会产生一个新的netty连接。如何缓存我们的连接,也就意味着，每次在此处建立一个新的连接是不合适的
-
-        // 解决方案？缓存channel，尝试从缓存中获取channel，如果未获取，则创建新的连接，并进行缓存
-
-
-        // 2、获取一个可用通道
-        Channel channel = getAvailableChannel(address);
-        log.debug("成功获取到与服务【{}】的连接通道。", interfaceRef.getName());
-
 
         /*
-         * ------------------ 封装报文 ---------------------------
+         * ------------------ 1、封装报文 ---------------------------
          */
-        // 3、封装报文
         RequestPayload requestPayload = RequestPayload.builder()
                 .interfaceName(interfaceRef.getName())
                 .methodName(method.getName())
@@ -88,6 +64,29 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
                 .serializeType((SerializerFactory.getSerializer(RpcBootstrap.SERIALIZE_TYPE).getCode()))
                 .requestPayload(requestPayload)
                 .build();
+
+        RpcBootstrap.REQUEST_THREAD_LOCAL.set(rpcRequest);
+
+
+
+
+        // 1、发现服务，从注册中心，寻找一个可用的服务
+        // 传入服务的名字,返回ip+端口
+        InetSocketAddress address = RpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
+        log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.", interfaceRef.getName(),address);
+
+        // 使用netty连接服务器，发送 调用的 服务的名字+方法名字+参数列表，得到结果
+        // 定义线程池，EventLoopGroup
+        // q：整个连接过程放在这里行不行，也就意味着每次调用都会产生一个新的netty连接。如何缓存我们的连接,也就意味着，每次在此处建立一个新的连接是不合适的
+
+        // 解决方案？缓存channel，尝试从缓存中获取channel，如果未获取，则创建新的连接，并进行缓存
+
+
+        // 2、获取一个可用通道
+        Channel channel = getAvailableChannel(address);
+        log.debug("成功获取到与服务【{}】的连接通道。", interfaceRef.getName());
+
+
         /*
          * ------------------同步策略-------------------------
          */
@@ -108,6 +107,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         CompletableFuture<Object> completableFuture = new CompletableFuture<>();
         RpcBootstrap.PENDING_REQUEST.put(requestId, completableFuture);
 
+
         // 这里这几 writeAndFlush 写出一个请求，这个请求的实例就会进入pipeline执行出站的一系列操作
         // 我们可以想象得到，第一个出站程序一定是将 rpcRequest --> 二进制的报文
         channel.writeAndFlush(rpcRequest).addListener((ChannelFutureListener) promise -> {
@@ -120,10 +120,15 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 //                    }
 
             // 只需要处理以下异常就行了
+
+            RpcBootstrap.REQUEST_THREAD_LOCAL.remove();
+
             if (!promise.isSuccess()) {
                 completableFuture.completeExceptionally(promise.cause());
             }
         });
+
+
 //
         // 如果没有地方处理这个 completableFuture ，这里会阻塞，等待complete方法的执行
         // q: 我们需要在哪里调用complete方法得到结果，很明显 pipeline 中最终的handler的处理结果

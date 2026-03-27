@@ -5,6 +5,10 @@ import com.DDT.channelhandler.hander.RpcRequestDecoder;
 import com.DDT.channelhandler.hander.RpcResponseEncoder;
 import com.DDT.discovery.Registry;
 import com.DDT.discovery.RegistryConfig;
+import com.DDT.loadbalancer.LoadBalancer;
+import com.DDT.loadbalancer.impl.ConsistentHashBalancer;
+import com.DDT.loadbalancer.impl.RoundRobinLoadBalancer;
+import com.DDT.transport.message.RpcRequest;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -33,7 +37,9 @@ public class RpcBootstrap {
     private ServiceConfig serviceConfig;
     private RegistryConfig registryConfig;
     private ProtocolConfig protocolConfig;
-    public static  int port = 8088;
+
+
+    public static final int PORT = 8084;
     public static String SERIALIZE_TYPE = "jdk";
     public static String COMPRESS_TYPE = "gzip";
 
@@ -41,6 +47,8 @@ public class RpcBootstrap {
     // 注册中心
     @Getter
     private Registry registry;
+    // 负载均衡器
+    public static LoadBalancer LOAD_BALANCER;
 
     // 维护已经发布且暴露的服务列表 key-> interface的全限定名  value -> ServiceConfig
     public static final Map<String,ServiceConfig<?>> SERVERS_LIST = new ConcurrentHashMap<>(16);
@@ -49,7 +57,10 @@ public class RpcBootstrap {
     public static final Map<InetSocketAddress, Channel> CHANNEL_CACHE = new ConcurrentHashMap<>(16);
 
     // 定义全局的对外挂起的 completableFuture
-    public final static Map<Long, CompletableFuture<Object>> PENDING_REQUEST = new ConcurrentHashMap<>(128);
+    public static final Map<Long, CompletableFuture<Object>> PENDING_REQUEST = new ConcurrentHashMap<>(128);
+
+    // 定义一个线程变量，来存储每一个请求的上下文信息，主要是为了负载均衡算法服务的
+    public static final ThreadLocal<RpcRequest> REQUEST_THREAD_LOCAL = new ThreadLocal<>();
 
     // 请求id生成器
     public static final IdGenerator ID_GENERATOR = new IdGenerator(1L, 2L);
@@ -85,6 +96,8 @@ public class RpcBootstrap {
 
         // 尝试使用 registryConfig 获取一个注册中心，有点工厂设计模式的意思了
         this.registry = registryConfig.getRegistry();
+
+        RpcBootstrap.LOAD_BALANCER = new ConsistentHashBalancer();
         return this;
     }
 
@@ -161,7 +174,7 @@ public class RpcBootstrap {
                 });
 
         // 4、绑定端口
-        ChannelFuture channelFuture = bootstrap.bind(port).sync();
+        ChannelFuture channelFuture = bootstrap.bind(PORT).sync();
 
         channelFuture.channel().closeFuture().sync();
         try {

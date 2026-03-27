@@ -21,7 +21,6 @@ public class ZookeeperRegistry extends AbstractRegistry {
     // 维护一个zk实例
     private ZooKeeper zooKeeper;
 
-    private final int port = 8088;
 
     public ZookeeperRegistry() {
         this.zooKeeper = ZookeeperUtils.createZookeeper();
@@ -53,7 +52,7 @@ public class ZookeeperRegistry extends AbstractRegistry {
         // ip我们通常是需要一个局域网ip，不是127.0.0.1,也不是ipv6
         // 192.168.12.121
         //todo: 后续处理端口的问题
-        String node = parentNode + "/" + NetUtils.getIp() + ":" + port;
+        String node = parentNode + "/" + NetUtils.getIp() + ":" + RpcBootstrap.PORT;
         if(!ZookeeperUtils.exists(zooKeeper,node,null)){
             ZookeeperNode zookeeperNode = new ZookeeperNode(node,null);
             ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.EPHEMERAL);
@@ -67,10 +66,10 @@ public class ZookeeperRegistry extends AbstractRegistry {
     /**
      * 发现服务地址
      * @param serviceName 服务名称
-     * @return
+     * @return 服务列表
      */
     @Override
-    public InetSocketAddress lookup(String serviceName) {
+    public List<InetSocketAddress> lookup(String serviceName) {
         String parentNode = "/" + Constant.BASE_PROVIDERS_PATH +"/"+serviceName;
         List<String> address = ZookeeperUtils.getChildren(zooKeeper, parentNode, null);
         List<InetSocketAddress> addressList = address.stream().map(s -> {
@@ -82,6 +81,6 @@ public class ZookeeperRegistry extends AbstractRegistry {
             throw new DiscoveryException("没有可用的服务");
         }
 
-        return addressList.get(0);
+        return addressList   ;
     }
 }

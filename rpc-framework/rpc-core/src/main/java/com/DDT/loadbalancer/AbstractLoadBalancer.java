@@ -28,7 +28,7 @@ public abstract class AbstractLoadBalancer implements LoadBalancer{
         if (selector == null) {
 
             // 对负载均衡器，内部维护服务列表作为缓存
-            List<InetSocketAddress> serviceList = RpcBootstrap.getInstance().getRegistry().lookup(serviceName);
+            List<InetSocketAddress> serviceList = RpcBootstrap.getInstance().getConfiguration().getRegistryConfig().getRegistry().lookup(serviceName);
 
             // 根据服务列表创建一个选择器，具体的负载均衡算法由子类实现
             selector = getSelector(serviceList);

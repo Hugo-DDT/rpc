@@ -60,9 +60,9 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
         long requestId = RpcBootstrap.ID_GENERATOR.getId();
         RpcRequest rpcRequest = RpcRequest.builder()
                 .requestId(requestId)
-                .compressType((CompressorFactory.getCompressor(RpcBootstrap.COMPRESS_TYPE).getCode()))
+                .compressType((CompressorFactory.getCompressor(RpcBootstrap.getInstance().getConfiguration().getCompressType()).getCode()))
                 .requestType(RequestType.REQUEST.getId())
-                .serializeType((SerializerFactory.getSerializer(RpcBootstrap.SERIALIZE_TYPE).getCode()))
+                .serializeType((SerializerFactory.getSerializer(RpcBootstrap.getInstance().getConfiguration().getSerializeType()).getCode()))
                 .requestPayload(requestPayload)
                 .timeStamp(new Date().getTime())
                 .build();
@@ -74,7 +74,7 @@ public class RpcConsumerInvocationHandler implements InvocationHandler {
 
         // 1、发现服务，从注册中心，寻找一个可用的服务
         // 传入服务的名字,返回ip+端口
-        InetSocketAddress address = RpcBootstrap.LOAD_BALANCER.selectServiceAddress(interfaceRef.getName());
+        InetSocketAddress address = RpcBootstrap.getInstance().getConfiguration().getLoadBalancer().selectServiceAddress(interfaceRef.getName());
         log.debug("服务调用方，发现了服务【{}】的可用主机【{}】.", interfaceRef.getName(),address);
 
         // 使用netty连接服务器，发送 调用的 服务的名字+方法名字+参数列表，得到结果

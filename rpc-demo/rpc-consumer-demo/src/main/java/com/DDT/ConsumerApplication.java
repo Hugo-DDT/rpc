@@ -20,7 +20,8 @@ public class ConsumerApplication {
                 .registry(new com.DDT.discovery.RegistryConfig("zookeeper://127.0.0.1:2181"))
                 .serialize("jdk")
                 .compress("gzip")
-                .reference(reference);
+                .reference(reference)
+                .scan("com.DDT");
 
         HelloRpc helloRpc = reference.get();
         helloRpc.sayHi("你好");

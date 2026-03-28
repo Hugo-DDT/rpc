@@ -1,5 +1,6 @@
 package com.DDT;
 
+import com.DDT.annotation.RpcApi;
 import com.DDT.channelhandler.hander.MethodCallHandler;
 import com.DDT.channelhandler.hander.RpcRequestDecoder;
 import com.DDT.channelhandler.hander.RpcResponseEncoder;
@@ -22,12 +23,17 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 
+import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class RpcBootstrap {
@@ -35,23 +41,10 @@ public class RpcBootstrap {
     public static final RpcBootstrap rpcBootstrap = new RpcBootstrap();
 
 
-    private String appName = "default";
-    private ReferenceConfig referenceConfig;
-    private ServiceConfig serviceConfig;
-    private RegistryConfig registryConfig;
-    private ProtocolConfig protocolConfig;
+    // 全局的配置中心
+    private final Configuration configuration;
 
 
-    public static final int PORT = 8086;
-    public static String SERIALIZE_TYPE = "jdk";
-    public static String COMPRESS_TYPE = "gzip";
-
-
-    // 注册中心
-    @Getter
-    private Registry registry;
-    // 负载均衡器
-    public static LoadBalancer LOAD_BALANCER;
 
     // 维护已经发布且暴露的服务列表 key-> interface的全限定名  value -> ServiceConfig
     public static final Map<String,ServiceConfig<?>> SERVERS_LIST = new ConcurrentHashMap<>(16);
@@ -75,6 +68,7 @@ public class RpcBootstrap {
 
     private RpcBootstrap() {
         // 构造启动引导程序，时需要做一些什么初始化的事
+        this.configuration = new Configuration();
     }
 
     public static RpcBootstrap getInstance() {
@@ -87,7 +81,7 @@ public class RpcBootstrap {
      * @return this当前实例
      */
     public RpcBootstrap application(String appName) {
-        this.appName = appName;
+        configuration.setAppName(appName);
         return this;
     }
 
@@ -101,9 +95,18 @@ public class RpcBootstrap {
         // 我们其实是更希望以后可以扩展更多种不同的实现
 
         // 尝试使用 registryConfig 获取一个注册中心，有点工厂设计模式的意思了
-        this.registry = registryConfig.getRegistry();
+        configuration.setRegistryConfig(registryConfig);
 
-        RpcBootstrap.LOAD_BALANCER = new RoundRobinLoadBalancer();
+        return this;
+    }
+
+    /**
+     * 配置负载均衡策略
+     * @param loadBalancer 注册中心
+     * @return this当前实例
+     */
+    public RpcBootstrap loadBalancer(LoadBalancer loadBalancer) {
+        configuration.setLoadBalancer(loadBalancer);
         return this;
     }
 
@@ -113,7 +116,7 @@ public class RpcBootstrap {
      * @return this当前实例
      */
     public RpcBootstrap protocol(ProtocolConfig protocolConfig) {
-        this.protocolConfig = protocolConfig;
+        configuration.setProtocolConfig(protocolConfig);
         if(log.isDebugEnabled()){
             log.debug("当前工程使用了：{}协议进行序列化",protocolConfig.toString());
         }
@@ -132,7 +135,7 @@ public class RpcBootstrap {
     public RpcBootstrap publish(ServiceConfig<?> service) {
         // 抽象了注册中心
         // 1、将服务注册到注册中心
-        registry.register(service);
+        configuration.getRegistryConfig().getRegistry().register(service);
 
         // 1、当服务调用方，通过接口、方法名、具体的方法参数列表发起调用，提供怎么知道使用哪一个实现
         // (1) new 一个  （2）spring beanFactory.getBean(Class)  (3) 自己维护映射关系
@@ -180,7 +183,7 @@ public class RpcBootstrap {
                 });
 
         // 4、绑定端口
-        ChannelFuture channelFuture = bootstrap.bind(PORT).sync();
+        ChannelFuture channelFuture = bootstrap.bind(configuration.getPort()).sync();
 
         channelFuture.channel().closeFuture().sync();
         try {
@@ -207,7 +210,7 @@ public class RpcBootstrap {
         // 在这个方法里我们是否可以拿到相关的配置项-注册中心
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
-        reference.setRegistry(registry);
+        reference.setRegistry(configuration.getRegistryConfig().getRegistry());
         return this;
     }
 
@@ -216,7 +219,7 @@ public class RpcBootstrap {
      * @param serializeType 序列化的方式
      */
     public RpcBootstrap serialize(String serializeType) {
-        SERIALIZE_TYPE = serializeType;
+        configuration.setSerializeType(serializeType);
         if(log.isDebugEnabled()){
             log.debug("我们配置了使用的序列化的方式为【{}】.",serializeType);
         }
@@ -229,11 +232,128 @@ public class RpcBootstrap {
      * @return
      */
     public RpcBootstrap compress(String compressType) {
-        COMPRESS_TYPE = compressType;
+        configuration.setCompressType(compressType);
         if(log.isDebugEnabled()){
             log.debug("我们配置了使用的压缩算法为【{}】.",compressType);
         }
         return this;
+    }
+
+    /**
+     * 通过包扫描的方式，批量发布服务
+     * @param packageName
+     * @return
+     */
+    public RpcBootstrap scan(String packageName) {
+        List<String> classNames = getAllClassNames(packageName);
+
+        List<Class<?>> classes = classNames.stream()
+                .map(className -> {
+                    try {
+                        return Class.forName(className);
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).filter(clazz -> clazz.isAnnotationPresent(RpcApi.class))
+                .collect(Collectors.toList());
+
+        for (Class<?> clazz : classes) {
+            // 获取他的接口
+            Class<?>[] interfaces = clazz.getInterfaces();
+            Object instance = null;
+            try {
+                instance = clazz.getConstructor().newInstance();
+            } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                     NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
+
+
+
+            for (Class<?> anInterface : interfaces) {
+                ServiceConfig<?> serviceConfig = new ServiceConfig<>();
+                serviceConfig.setInterface(anInterface);
+                serviceConfig.setRef(instance);
+                if (log.isDebugEnabled()){
+                    log.debug("---->已经通过包扫描，将服务【{}】发布.",anInterface);
+                }
+                // 3、发布
+                publish(serviceConfig);
+            }
+
+        }
+
+        return this;
+    }
+
+    /**
+     * 通过包名获取到这个包下的所有类的全限定名
+     * @param packageName
+     * @return
+     */
+    private List<String> getAllClassNames(String packageName) {
+
+        // 通过包名获取到一个绝对路径
+        // bashPath = com.DDT  -->  com/DDT
+        String basePath = packageName.replaceAll("\\.", "/");
+        // url = file:/G:/.../com/DDT
+        URL url = ClassLoader.getSystemResource(basePath);
+        if(url == null){
+            throw new RuntimeException("包扫描时，发现路径不存在.");
+        }
+        // absolutePath = G://.../com/DDT
+        String absolutePath = url.getPath();
+
+        // 通过绝对路径进行递归扫描，获取到所有的类的全限定名
+        return recursionFile(absolutePath, basePath);
+    }
+
+
+    private List<String> recursionFile(String absolutePath, String basePath) {
+        // 根据当前路径创建文件对象（可能是目录，也可能是文件）
+        File file = new File(absolutePath);
+        // 用于收集扫描到的类全限定名
+        List<String> classNames = new ArrayList<>();
+
+        // 如果是目录，则继续递归扫描子文件/子目录
+        if (file.isDirectory()) {
+            File[] files = file.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    classNames.addAll(recursionFile(f.getAbsolutePath(), basePath));
+                }
+            }
+            return classNames;
+        }
+
+        // 走到这里说明是文件，先获取绝对路径
+        String absoluteFilePath = file.getAbsolutePath();
+        // 只处理 .class 文件，其他文件直接忽略
+        if (!absoluteFilePath.endsWith(".class")) {
+            return classNames;
+        }
+
+        // 统一路径分隔符，避免 Windows/Linux 差异
+        String normalizedPath = absoluteFilePath.replace("\\", "/");
+        // 找到包路径在绝对路径中的起始位置
+        int start = normalizedPath.indexOf(basePath);
+        // 没找到说明不在目标包下，直接返回
+        if (start < 0) {
+            return classNames;
+        }
+
+        // 截取包路径后的内容并转成类全限定名，同时去掉 .class 后缀
+        String className = normalizedPath
+                .substring(start)
+                .replace("/", ".")
+                .replaceAll("\\.class$", "");
+
+        classNames.add(className);
+        return classNames;
+    }
+
+    public Configuration getConfiguration() {
+        return configuration;
     }
 
 }

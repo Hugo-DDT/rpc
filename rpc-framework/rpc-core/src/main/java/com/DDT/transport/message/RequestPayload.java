@@ -10,7 +10,7 @@ import java.io.Serializable;
 /**
  * 请求载荷，封装了接口全类名、方法名、参数类型、参数值、返回值类型等信息
  * 请求调用方所请求的接口方法的描述
- * helloYrpc.sayHi("你好");
+ * hellorpc.sayHi("你好");
  */
 @Data
 @AllArgsConstructor

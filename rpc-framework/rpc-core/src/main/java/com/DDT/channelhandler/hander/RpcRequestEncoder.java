@@ -31,7 +31,7 @@ import java.io.ObjectOutputStream;
  *   +--------------------------------------------------------------------------------------------------------+---+
  * </pre>
  *
- * 4B magic(魔数)   --->yrpc.getBytes()
+ * 4B magic(魔数)   --->rpc.getBytes()
  * 1B version(版本)   ----> 1
  * 2B header length 首部的长度
  * 4B full length 报文总长度
@@ -72,10 +72,10 @@ public class RpcRequestEncoder extends MessageToByteEncoder<RpcRequest> {
         // 1、根据配置的序列化方式进行序列化
         byte[] body = new byte[0];
         if (rpcRequest.getRequestPayload() != null) {
-            Serializer serializer = SerializerFactory.getSerializer(rpcRequest.getSerializeType()).getSerializer();
+            Serializer serializer = SerializerFactory.getSerializer(rpcRequest.getSerializeType()).getImpl();
             body = serializer.serialize(rpcRequest.getRequestPayload());
             // 2、根据配置的压缩方式进行压缩
-            Compressor compressor = CompressorFactory.getCompressor(rpcRequest.getCompressType()).getCompressor();
+            Compressor compressor = CompressorFactory.getCompressor(rpcRequest.getCompressType()).getImpl();
             body = compressor.compress(body);
         }
 

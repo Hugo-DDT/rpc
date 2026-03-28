@@ -30,7 +30,7 @@ import java.io.ObjectInputStream;
  *  *   +--------------------------------------------------------------------------------------------------------+---+
  *  * </pre>
  * *
- * * 4B magic(魔数)   --->yrpc.getBytes()
+ * * 4B magic(魔数)   --->rpc.getBytes()
  * * 1B version(版本)   ----> 1
  * * 2B header length 首部的长度
  * * 4B full length 报文总长度
@@ -131,12 +131,12 @@ public class RpcResponseDecoder extends LengthFieldBasedFrameDecoder {
         if(payload.length > 0) {
             // 有了字节数组之后就可以解压缩，反序列化
             // 1、解压缩
-            Compressor compressor = CompressorFactory.getCompressor(compressType).getCompressor();
+            Compressor compressor = CompressorFactory.getCompressor(compressType).getImpl();
             payload = compressor.decompress(payload);
 
             // 2、反序列化
             Serializer serializer = SerializerFactory
-                    .getSerializer(rpcResponse.getSerializeType()).getSerializer();
+                    .getSerializer(rpcResponse.getSerializeType()).getImpl();
             Object body = serializer.deserialize(payload, Object.class);
             rpcResponse.setBody(body);
         }

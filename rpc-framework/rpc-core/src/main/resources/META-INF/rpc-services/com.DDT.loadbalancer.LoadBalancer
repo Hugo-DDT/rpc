@@ -1,0 +1,3 @@
+1-consistentHash-com.DDT.loadbalancer.impl.ConsistentHashBalancer
+2-minimumResponseTime-com.DDT.loadbalancer.impl.MinimumResponseTimeLoadBalancer
+3-roundRobinLoad-com.DDT.loadbalancer.impl.RoundRobinLoadBalancer

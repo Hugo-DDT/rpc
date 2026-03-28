@@ -30,7 +30,7 @@ import java.io.ObjectOutputStream;
  *   +--------------------------------------------------------------------------------------------------------+---+
  * </pre>
  *
- * 4B magic(魔数)   --->yrpc.getBytes()
+ * 4B magic(魔数)   --->rpc.getBytes()
  * 1B version(版本)   ----> 1
  * 2B header length 首部的长度
  * 4B full length 报文总长度
@@ -70,12 +70,11 @@ public class RpcResponseEncoder extends MessageToByteEncoder<RpcResponse> {
         byte[] body = null;
         if(rpcResponse.getBody() != null) {
             Serializer serializer = SerializerFactory
-                    .getSerializer(rpcResponse.getSerializeType()).getSerializer();
+                    .getSerializer(rpcResponse.getSerializeType()).getImpl();
             body = serializer.serialize(rpcResponse.getBody());
             // 2、压缩
             Compressor compressor = CompressorFactory.getCompressor(
-                    rpcResponse.getCompressType()
-            ).getCompressor();
+                    rpcResponse.getCompressType()).getImpl();
             body = compressor.compress(body);
         }
 

@@ -3,16 +3,16 @@
 <configuration>
 
     <port>8089</port>
-    <appName>yrpc-default-appName</appName>
+    <appName>rpc-default-appName</appName>
     <registry url="zookeeper://127.0.0.1:2181"/>
 
     <!-- 二选一 -->
     <serializeType type="hessian"/>
-    <serializer class="com.DDT.serialize.impl.HessianSerializer"/>
+    <serializer code="3" name="hession" class="com.DDT.serialize.impl.HessianSerializer"/>
 
     <!-- 二选一 -->
     <compressType type="gzip"/>
-    <compressor class="com.DDT.compress.impl.GzipCompressor"/>
+    <compressor code="1" name="gzip"  class="com.DDT.compress.impl.GzipCompressor"/>
 
     <!-- 二选一 -->
     <loadBalancer class="com.DDT.loadbalancer.impl.MinimumResponseTimeLoadBalancer"/>

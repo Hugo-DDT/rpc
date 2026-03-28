@@ -1,13 +1,12 @@
-package com.DDT;
+package com.DDT.config;
 
+import com.DDT.IdGenerator;
 import com.DDT.compress.Compressor;
-import com.DDT.compress.impl.GzipCompressor;
+import com.DDT.compress.CompressorFactory;
 import com.DDT.discovery.RegistryConfig;
 import com.DDT.loadbalancer.LoadBalancer;
-import com.DDT.loadbalancer.impl.RoundRobinLoadBalancer;
 import com.DDT.serialize.Serializer;
-import com.DDT.serialize.impl.JdkSerializer;
-import lombok.Data;
+import com.DDT.serialize.SerializerFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -20,53 +19,19 @@ import javax.xml.xpath.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Objects;
 
 /**
- * 全局的配置类，代码配置-->xml配置-->默认项
- *
+ * 解析xml配置文件的类，负责从xml文件中解析配置信息，并且将其设置到Configuration实例中
  */
-@Data
 @Slf4j
-public class Configuration {
-
-    // 配置信息-->端口号
-    private int port = 8081;
-
-    // 配置信息-->应用程序的名字
-    private String appName = "default";
-
-    // 配置信息-->注册中心
-    private RegistryConfig registryConfig = new RegistryConfig("zookeeper://127.0.0.1:2181");
-
-    // 配置信息-->序列化协议
-    private ProtocolConfig protocolConfig = new ProtocolConfig("jdk");
-
-    // 配置信息-->序列化协议
-    private String serializeType = "jdk";
-    private Serializer serializer = new JdkSerializer();
-
-    // 配置信息-->压缩使用的协议
-    private String compressType = "gzip";
-    private Compressor compressor = new GzipCompressor();
-
-    // 配置信息-->id发射器
-    public IdGenerator idGenerator = new IdGenerator(1, 2);
-
-    // 配置信息-->负载均衡策略
-    private LoadBalancer loadBalancer = new RoundRobinLoadBalancer();
-
-    // 读xml，dom4j
-    public Configuration() {
-        // 读取xml获得上边的信息
-        loadFromXml(this);
-
-    }
+public class XmlResolver {
 
     /**
      * 从配置文件读取配置信息,我们不使用dom4j，使用原生的api
      * @param configuration 配置实例
      */
-    private void loadFromXml(Configuration configuration) {
+    public void loadFromXml(Configuration configuration) {
         try {
             // 1、创建一个document
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -91,13 +56,17 @@ public class Configuration {
 
             configuration.setRegistryConfig(resolveRegistryConfig(doc, xpath));
 
+
+            // 处理使用的压缩方式和序列化方式
             configuration.setCompressType(resolveCompressType(doc, xpath));
-            configuration.setCompressor(resolveCompressCompressor(doc, xpath));
-
             configuration.setSerializeType(resolveSerializeType(doc, xpath));
-            configuration.setProtocolConfig(new ProtocolConfig(this.serializeType));
 
-            configuration.setSerializer(resolveSerializer(doc, xpath));
+            // 配置新的压缩方式和序列化方式，并将其纳入工厂中
+            ObjectWrapper<Compressor> compressorObjectWrapper = resolveCompressCompressor(doc, xpath);
+            CompressorFactory.addCompressor(compressorObjectWrapper);
+
+            ObjectWrapper<Serializer> serializerObjectWrapper = resolveSerializer(doc, xpath);
+            SerializerFactory.addSerializer(serializerObjectWrapper);
 
             configuration.setLoadBalancer(resolveLoadBalancer(doc, xpath));
 
@@ -112,8 +81,9 @@ public class Configuration {
 
     /**
      * 解析端口号
+     *
      * @param doc   文档
-     * @param xpath  xpath解析器
+     * @param xpath xpath解析器
      * @return 端口号
      */
     private int resolvePort(Document doc, XPath xpath) {
@@ -124,9 +94,10 @@ public class Configuration {
 
     /**
      * 解析应用名称
-     * @param doc    文档
-     * @param xpath  xpath解析器
-     * @return       应用名
+     *
+     * @param doc   文档
+     * @param xpath xpath解析器
+     * @return 应用名
      */
     private String resolveAppName(Document doc, XPath xpath) {
         String expression = "/configuration/appName";
@@ -135,9 +106,10 @@ public class Configuration {
 
     /**
      * 解析负载均衡器
-     * @param doc    文档
-     * @param xpath  xpath解析器
-     * @return       负载均衡器实例
+     *
+     * @param doc   文档
+     * @param xpath xpath解析器
+     * @return 负载均衡器实例
      */
     private LoadBalancer resolveLoadBalancer(Document doc, XPath xpath) {
         String expression = "/configuration/loadBalancer";
@@ -146,8 +118,9 @@ public class Configuration {
 
     /**
      * 解析id发号器
-     * @param doc    文档
-     * @param xpath  xpath解析器
+     *
+     * @param doc   文档
+     * @param xpath xpath解析器
      * @return id发号器实例
      */
     private IdGenerator resolveIdGenerator(Document doc, XPath xpath) {
@@ -169,9 +142,10 @@ public class Configuration {
 
     /**
      * 解析注册中心
-     * @param doc    文档
-     * @param xpath  xpath解析器
-     * @return       RegistryConfig
+     *
+     * @param doc   文档
+     * @param xpath xpath解析器
+     * @return RegistryConfig
      */
     private RegistryConfig resolveRegistryConfig(Document doc, XPath xpath) {
         String expression = "/configuration/registry";
@@ -182,20 +156,24 @@ public class Configuration {
 
     /**
      * 解析压缩的具体实现
-     * @param doc    文档
-     * @param xpath  xpath解析器
-     * @return       Compressor
+     *
+     * @param doc   文档
+     * @param xpath xpath解析器
+     * @return ObjectWrapper<Compressor>
      */
-    private Compressor resolveCompressCompressor(Document doc, XPath xpath) {
+    private ObjectWrapper<Compressor> resolveCompressCompressor(Document doc, XPath xpath) {
         String expression = "/configuration/compressor";
-        return parseObject(doc, xpath, expression, null);
+        Compressor compressor = parseObject(doc, xpath, expression, null);
+        Byte code = Byte.valueOf(Objects.requireNonNull(parseString(doc, xpath, expression, "code")));
+        String name = parseString(doc, xpath, expression, "name");
+        return new ObjectWrapper<>(code,name,compressor);
     }
 
     /**
-     *解析压缩的算法名称
-     * @param doc    文档
-     * @param xpath  xpath解析器
-     * @return       压缩算法名称
+     * 解析压缩的算法名称
+     * @param doc   文档
+     * @param xpath xpath解析器
+     * @return 压缩算法名称
      */
     private String resolveCompressType(Document doc, XPath xpath) {
         String expression = "/configuration/compressType";
@@ -204,9 +182,9 @@ public class Configuration {
 
     /**
      * 解析序列化的方式
-     * @param doc    文档
-     * @param xpath  xpath解析器
-     * @return       序列化的方式
+     * @param doc   文档
+     * @param xpath xpath解析器
+     * @return 序列化的方式
      */
     private String resolveSerializeType(Document doc, XPath xpath) {
         String expression = "/configuration/serializeType";
@@ -215,13 +193,16 @@ public class Configuration {
 
     /**
      * 解析序列化器
-     * @param doc    文档
-     * @param xpath  xpath解析器
-     * @return       序列化器
+     * @param doc   文档
+     * @param xpath xpath解析器
+     * @return 序列化器
      */
-    private Serializer resolveSerializer(Document doc, XPath xpath) {
+    private ObjectWrapper<Serializer> resolveSerializer(Document doc, XPath xpath) {
         String expression = "/configuration/serializer";
-        return parseObject(doc, xpath, expression, null);
+        Serializer serializer = parseObject(doc, xpath, expression, null);
+        Byte code = Byte.valueOf(Objects.requireNonNull(parseString(doc, xpath, expression, "code")));
+        String name = parseString(doc, xpath, expression, "name");
+        return new ObjectWrapper<>(code,name,serializer);
     }
 
 
@@ -273,7 +254,7 @@ public class Configuration {
      * @param paramType  参数列表
      * @param param      参数
      * @param <T>        泛型
-     * @return           配置的实例
+     * @return 配置的实例
      */
     private <T> T parseObject(Document doc, XPath xpath, String expression, Class<?>[] paramType, Object... param) {
         try {
@@ -294,10 +275,6 @@ public class Configuration {
             log.error("An exception occurred while parsing the expression.", e);
         }
         return null;
-    }
-
-    public static void main(String[] args) {
-        Configuration configuration = new Configuration();
     }
 
 

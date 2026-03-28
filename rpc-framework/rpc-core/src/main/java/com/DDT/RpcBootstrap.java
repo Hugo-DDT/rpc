@@ -4,13 +4,10 @@ import com.DDT.annotation.RpcApi;
 import com.DDT.channelhandler.hander.MethodCallHandler;
 import com.DDT.channelhandler.hander.RpcRequestDecoder;
 import com.DDT.channelhandler.hander.RpcResponseEncoder;
+import com.DDT.config.Configuration;
 import com.DDT.core.HeartbeatDetector;
-import com.DDT.discovery.Registry;
 import com.DDT.discovery.RegistryConfig;
 import com.DDT.loadbalancer.LoadBalancer;
-import com.DDT.loadbalancer.impl.ConsistentHashBalancer;
-import com.DDT.loadbalancer.impl.MinimumResponseTimeLoadBalancer;
-import com.DDT.loadbalancer.impl.RoundRobinLoadBalancer;
 import com.DDT.transport.message.RpcRequest;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
@@ -19,7 +16,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 
@@ -110,18 +106,7 @@ public class RpcBootstrap {
         return this;
     }
 
-    /**
-     * 配置当前暴露的服务使用的协议
-     * @param protocolConfig 协议的封装
-     * @return this当前实例
-     */
-    public RpcBootstrap protocol(ProtocolConfig protocolConfig) {
-        configuration.setProtocolConfig(protocolConfig);
-        if(log.isDebugEnabled()){
-            log.debug("当前工程使用了：{}协议进行序列化",protocolConfig.toString());
-        }
-        return this;
-    }
+
 
     /**
      * ---------------------------服务提供方的相关api---------------------------------

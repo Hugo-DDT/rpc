@@ -6,6 +6,7 @@ import com.DDT.loadbalancer.Selector;
 import io.netty.channel.Channel;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -34,6 +35,7 @@ public class MinimumResponseTimeLoadBalancer extends AbstractLoadBalancer {
             }
 
             // 直接从缓存中获取一个可用的就行了
+            System.out.println("----->"+ Arrays.toString(RpcBootstrap.CHANNEL_CACHE.values().toArray()));
             Channel channel = (Channel)RpcBootstrap.CHANNEL_CACHE.values().toArray()[0];
             return (InetSocketAddress)channel.remoteAddress();
         }

@@ -46,6 +46,13 @@ public class ZookeeperRegistry extends AbstractRegistry {
             ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.PERSISTENT);
         }
 
+        // 建立分组节点
+        parentNode = parentNode + "/" + service.getGroup();
+        if(!ZookeeperUtils.exists(zooKeeper,parentNode,null)){
+            ZookeeperNode zookeeperNode = new ZookeeperNode(parentNode,null);
+            ZookeeperUtils.createNode(zooKeeper, zookeeperNode, null, CreateMode.PERSISTENT);
+        }
+
 
 
         // 创建本机的临时节点, ip:port ,
@@ -69,8 +76,8 @@ public class ZookeeperRegistry extends AbstractRegistry {
      * @return 服务列表
      */
     @Override
-    public List<InetSocketAddress> lookup(String serviceName) {
-        String parentNode = "/" + Constant.BASE_PROVIDERS_PATH +"/"+serviceName;
+    public List<InetSocketAddress> lookup(String serviceName, String group) {
+        String parentNode = "/" + Constant.BASE_PROVIDERS_PATH +"/"+serviceName + "/" +group;
         List<String> address = ZookeeperUtils.getChildren(zooKeeper, parentNode, new UpAndDownWatcher());
         List<InetSocketAddress> addressList = address.stream().map(s -> {
             String[] split = s.split(":");

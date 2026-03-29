@@ -9,6 +9,10 @@ public class ServiceConfig<T> {
     @Getter
     private Object ref;
 
+    @Setter
+    @Getter
+    private String group = "default";
+
     public Class<?> getInterface() {
         return interfaceProvider;
     }

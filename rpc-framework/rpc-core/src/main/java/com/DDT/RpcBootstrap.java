@@ -196,6 +196,7 @@ public class RpcBootstrap {
         // 配置reference，将来调用get方法时，方便生成代理对象
         // 1、reference需要一个注册中心
         reference.setRegistry(configuration.getRegistryConfig().getRegistry());
+        reference.setGroup(this.getConfiguration().getGroup());
         return this;
     }
 
@@ -253,12 +254,16 @@ public class RpcBootstrap {
                 throw new RuntimeException(e);
             }
 
+            // 获取分组信息
+            RpcApi rpcApi = clazz.getAnnotation(RpcApi.class);
+            String group = rpcApi.group();
 
 
             for (Class<?> anInterface : interfaces) {
                 ServiceConfig<?> serviceConfig = new ServiceConfig<>();
                 serviceConfig.setInterface(anInterface);
                 serviceConfig.setRef(instance);
+                serviceConfig.setGroup(group);
                 if (log.isDebugEnabled()){
                     log.debug("---->已经通过包扫描，将服务【{}】发布.",anInterface);
                 }
@@ -339,6 +344,11 @@ public class RpcBootstrap {
 
     public Configuration getConfiguration() {
         return configuration;
+    }
+
+    public RpcBootstrap group(String group) {
+        this.getConfiguration().setGroup(group);
+        return this;
     }
 
 }

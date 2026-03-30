@@ -3,7 +3,9 @@ package com.DDT.channelhandler.hander;
 import com.DDT.RpcBootstrap;
 import com.DDT.enumeration.RespCode;
 import com.DDT.exceptions.ResponseException;
+import com.DDT.loadbalancer.LoadBalancer;
 import com.DDT.protection.CircuitBreaker;
+import com.DDT.transport.message.RpcRequest;
 import com.DDT.transport.message.RpcResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -65,6 +67,23 @@ public class MySimpleChannelInboundHandler extends SimpleChannelInboundHandler<R
             if (log.isDebugEnabled()) {
                 log.debug("以寻找到编号为【{}】的completableFuture,处理心跳检测，处理响应结果。", rpcResponse.getRequestId());
             }
+        } else if(code == RespCode.BECOLSING.getCode()){
+            completableFuture.complete(null);
+            if (log.isDebugEnabled()) {
+                log.debug("当前id为[{}]的请求，访问被拒绝，目标服务器正处于关闭中，响应码[{}].",
+                        rpcResponse.getRequestId(),rpcResponse.getCode());
+            }
+
+            // 修正负载均衡器
+            // 从健康列表中移除
+            RpcBootstrap.CHANNEL_CACHE.remove(socketAddress);
+            // reLoadBalance
+            LoadBalancer loadBalancer = RpcBootstrap.getInstance() .getConfiguration().getLoadBalancer();
+            // 重新进行负载均衡
+            RpcRequest rpcRequest = RpcBootstrap.REQUEST_THREAD_LOCAL.get();
+            loadBalancer.reLoadBalance(rpcRequest.getRequestPayload().getInterfaceName(), RpcBootstrap.CHANNEL_CACHE.keySet().stream().toList());
+
+            throw new ResponseException(code, RespCode.BECOLSING.getDesc());
         }
     }
 }

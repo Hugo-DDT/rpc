@@ -6,6 +6,7 @@ import com.DDT.channelhandler.hander.RpcRequestDecoder;
 import com.DDT.channelhandler.hander.RpcResponseEncoder;
 import com.DDT.config.Configuration;
 import com.DDT.core.HeartbeatDetector;
+import com.DDT.core.RpcShutDownHook;
 import com.DDT.discovery.RegistryConfig;
 import com.DDT.loadbalancer.LoadBalancer;
 import com.DDT.transport.message.RpcRequest;
@@ -145,10 +146,18 @@ public class RpcBootstrap {
      * 启动netty服务
      */
     public void start() throws InterruptedException {
+
+        // 注册关闭应用程序的钩子函数
+        Runtime.getRuntime().addShutdownHook(new RpcShutDownHook());
+
+        // 1、创建eventLoop，老板只负责处理请求，之后会将请求分发至worker
         EventLoopGroup boss = new NioEventLoopGroup(2);
         EventLoopGroup worker = new NioEventLoopGroup(10);
 
+        // 2、需要一个服务器引导程序
         ServerBootstrap bootstrap = new ServerBootstrap();
+
+        // 3、配置服务器
         bootstrap = bootstrap.group(boss, worker)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {

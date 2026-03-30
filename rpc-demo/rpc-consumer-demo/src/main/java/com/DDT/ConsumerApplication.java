@@ -2,6 +2,8 @@ package com.DDT;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 @Slf4j
 public class ConsumerApplication {
     public static void main(String[] args){
@@ -31,6 +33,8 @@ public class ConsumerApplication {
                 log.info("sayHi-->{}", helloRpc.sayHi("你好"));
             }).start();
         }
+
+
 
     }
 
